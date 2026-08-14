@@ -56,7 +56,7 @@ python -m streamlit run streamlit_app.py
 
 ### 2. Arayüz Kullanım Adımları:
 1. **Sol Menü:** Sipariş özelliklerini (kVA, Yüksek/Alçak Gerilim, uk%, boşta/yükte kayıplar) ve tasarım limitlerini (Akı Yoğunluğu, Akım Yoğunluğu, İletken Tipi vb.) belirleyin.
-2. **Hesapla Butonu:** 🚀 "Hesapla" butonuna basarak mühendislik hesaplamalarını çalıştırın.
+2. **Hesapla Butonu:**  "Hesapla" butonuna basarak mühendislik hesaplamalarını çalıştırın.
 3. **Sekmeler (Tabs):** 
    - Geometri ve Elektriksel KPI'ları inceleyin.
    - **Görsel Şema:** Fiziksel kesitleri interaktif olarak inceleyin (fare ile sargıların üzerine gelip tooltip görebilirsiniz).
