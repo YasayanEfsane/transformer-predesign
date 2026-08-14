@@ -4,30 +4,30 @@ Bu proje, 3 fazlı dağıtım transformatörleri için elektromanyetik, mekanik,
 
 Uygulama, hem mühendisler için matematiksel bir altyapı (Python SDK) sunar hem de kullanıcı dostu bir web arayüzü (Streamlit) ile interaktif analiz yapmaya olanak tanır.
 
-## 🌟 Temel Özellikler
+##  Temel Özellikler
 
-- **🧮 Elektromanyetik & Fizik Motoru:**
+- **Elektromanyetik & Fizik Motoru:**
   - Sargı tasarımı (Bakır / Alüminyum, HV / LV)
   - Çekirdek tasarımı (Silisli Sac, 3 Bacaklı)
   - Empedans, boşta/yükte kayıplar, verim ve gerilim düşümü hesaplamaları.
-- **💰 Gerçek Zamanlı Maliyet (LME) ve Ağırlık Analizi:**
+- **Gerçek Zamanlı Maliyet (LME) ve Ağırlık Analizi:**
   - Güncel veya manuel girilen hammadde (LME) fiyatlarına göre İmalat Maliyeti hesabı.
   - TOC (Total Ownership Cost) ve Ceza Faktörleri (A/B faktörleri) destekli A/B tasarımı testi.
-- **📈 Dinamik Termal Simülasyon (Ön Tahmin):**
+- **Dinamik Termal Simülasyon (Ön Tahmin):**
   - **IEC 60076-7** standardındaki üstel (exponential) sıcaklık geçiş formüllerine dayalı simülasyon.
   - Zamana bağlı 24 saatlik yük (% load) ve ortam sıcaklığı profillerini işleyerek **Üst Yağ (Top-Oil)** ve **Hot-Spot** sıcaklıklarının dinamik hesabını yapar.
   - Zaman kaydırıcısı (slider) ile günün her anı için anlık SVG Isı Haritası görselleştirme.
-- **🎨 İnteraktif SVG Şema & Isı Haritası:**
+- **İnteraktif SVG Şema & Isı Haritası:**
   - Hesaplanan fiziksel boyutlara (çekirdek çapı, et kalınlığı, yalıtım boşlukları) göre gerçekçi dinamik SVG transformatör kesiti.
   - Termal simülasyondan alınan sıcaklık değerlerine göre renk değiştiren termal ısı haritası.
-- **🖨️ PDF Mühendislik Raporu:**
+- **PDF Mühendislik Raporu:**
   - Tasarım sonuçlarını (boyutlar, verim, kayıplar, kütleler vb.) temiz bir mühendislik dökümanı olarak PDF formatında çıktı alma imkanı.
-- **🤖 Parametrik Optimizasyon:**
+- **Parametrik Optimizasyon:**
   - Grid-search yöntemiyle Akı (T), HV ve LV Akım Yoğunluğu (A/mm²) üzerinden en uygun maliyetli TOC değerini veren tasarımı bulma.
 
 ---
 
-## 🛠️ Kurulum
+##  Kurulum
 
 Proje **Python 3.12+** ve üzeri sürümlerde çalışacak şekilde tasarlanmıştır.
 
@@ -45,7 +45,7 @@ Proje **Python 3.12+** ve üzeri sürümlerde çalışacak şekilde tasarlanmı�
 
 ---
 
-## 🚀 Nasıl Çalıştırılır?
+## Nasıl Çalıştırılır?
 
 ### 1. Kullanıcı Arayüzü (Web - Streamlit)
 Uygulamanın grafiksel arayüzüne erişmek için proje kök dizininde şu komutu çalıştırın:
@@ -65,7 +65,7 @@ python -m streamlit run streamlit_app.py
 
 ---
 
-## 📂 Proje Yapısı
+##  Proje Yapısı
 
 ```
 transformer_design/
@@ -83,7 +83,7 @@ transformer_design/
 
 ---
 
-## ✅ Testleri Çalıştırma
+##  Testleri Çalıştırma
 
 Kodun doğruluğunu ve fizik motorunun regrese (bozulma) olup olmadığını kontrol etmek için tüm test senaryolarını çalıştırabilirsiniz:
 
@@ -94,5 +94,5 @@ python -m pytest tests/
 
 ---
 
-## 📜 Lisans & Uyarılar
+##  Lisans & Uyarılar
 Bu yazılım bir **Ön Tasarım (Screening)** aracıdır. Elde edilen değerler, transformatör üretim standartlarına (IEC/IEEE) uygun olarak tasarımın yönünü belirlemeye yardımcı olur; ancak profesyonel FEA (Sonlu Elemanlar Analizi) veya CFD hesaplamalarının yerine geçmez. Üretim aşamasından önce muhakkak tam kapsamlı tip testi simülasyonlarıyla doğrulanmalıdır.
