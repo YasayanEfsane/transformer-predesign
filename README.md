@@ -21,7 +21,7 @@ Uygulama, hem mühendisler için matematiksel bir altyapı (Python SDK) sunar he
   - Hesaplanan fiziksel boyutlara (çekirdek çapı, et kalınlığı, yalıtım boşlukları) göre gerçekçi dinamik SVG transformatör kesiti.
   - Termal simülasyondan alınan sıcaklık değerlerine göre renk değiştiren termal ısı haritası.
 - **PDF Mühendislik Raporu:**
-  - Tasarım sonuçlarını (boyutlar, verim, kayıplar, kütleler vb.) temiz bir mühendislik dökümanı olarak PDF formatında çıktı alma imkanı.
+  - Tasarım sonuçlarını (boyutlar, verim, kayıplar, kütleler vb.) temiz bir mühendislik dokümanı olarak PDF formatında çıktı alma imkanı.
 - **Parametrik Optimizasyon:**
   - Grid-search yöntemiyle Akı (T), HV ve LV Akım Yoğunluğu (A/mm²) üzerinden en uygun maliyetli TOC değerini veren tasarımı bulma.
 
