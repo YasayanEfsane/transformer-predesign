@@ -42,21 +42,38 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-      .stApp {background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);}
+      .stApp {
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+        color: #0f172a;
+      }
+      [data-testid="stMain"] {color: #0f172a;}
+      [data-testid="stMain"] h1,
+      [data-testid="stMain"] h2,
+      [data-testid="stMain"] h3,
+      [data-testid="stMain"] h4,
+      [data-testid="stMain"] p,
+      [data-testid="stMain"] label,
+      [data-testid="stMain"] li {color: #0f172a;}
       [data-testid="stSidebar"] {background: #0f172a;}
       [data-testid="stSidebar"] * {color: #e2e8f0;}
       [data-testid="stMetric"] {
         background: rgba(255,255,255,.88); border: 1px solid #e2e8f0;
         border-radius: 16px; padding: 14px 16px; box-shadow: 0 8px 28px rgba(15,23,42,.06);
       }
+      [data-testid="stMetricLabel"] p {color: #64748b !important;}
+      [data-testid="stMetricValue"] {color: #0f172a !important;}
+      [data-baseweb="tab"] p {color: #475569 !important;}
+      [data-baseweb="tab"][aria-selected="true"] p {color: #ef4444 !important;}
+      [data-testid="stAlert"] p {color: #1f2937 !important;}
+      [data-testid="stCaptionContainer"] p {color: #64748b !important;}
       .hero {
         padding: 24px 28px; border-radius: 22px; color: white; margin-bottom: 18px;
         background: linear-gradient(120deg, #0f172a, #1d4ed8 62%, #06b6d4);
         box-shadow: 0 18px 50px rgba(29,78,216,.20);
       }
-      .hero h1 {margin: 0 0 8px 0; font-size: 2.1rem;}
-      .hero p {margin: 0; color: #dbeafe;}
-      .screening-note {font-size: .9rem; color: #64748b;}
+      .hero h1 {margin: 0 0 8px 0; font-size: 2.1rem; color: #ffffff !important;}
+      .hero p {margin: 0; color: #dbeafe !important;}
+      .screening-note {font-size: .9rem; color: #64748b !important;}
     </style>
     """,
     unsafe_allow_html=True,
