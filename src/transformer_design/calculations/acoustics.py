@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Any
+from typing import Dict
 
 def calculate_acoustic_noise(
     core_weight_kg: float,

@@ -3,28 +3,43 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "transformer_design"
-version = "0.1.0"
-description = "Üç Fazlı Dağıtım Transformatörü Matematik ve Ön Tasarım Kütüphanesi"
+name = "transformer-design"
+version = "0.2.0"
+description = "Üç fazlı dağıtım transformatörleri için doğrulanmış ön tasarım motoru"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0.0",
-    "Pint>=0.23"
+    "Pint>=0.23",
 ]
 
 [project.optional-dependencies]
+ui = [
+    "fpdf2>=2.7.0",
+    "pandas>=2.2.0",
+    "streamlit>=1.36.0",
+]
 dev = [
     "pytest>=8.0.0",
     "ruff>=0.3.0",
-    "mypy>=1.9.0"
+    "mypy>=1.9.0",
 ]
+
+[project.scripts]
+transformer-design = "transformer_design.cli:main"
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
 
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]

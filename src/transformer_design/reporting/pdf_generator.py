@@ -1,5 +1,7 @@
 from fpdf import FPDF
 import datetime
+import os
+import tempfile
 
 def sanitize_text(text: str) -> str:
     charmap = {
@@ -22,12 +24,12 @@ class TransformerReport(FPDF):
         # Ust Baslik
         self.set_font('helvetica', 'B', 22)
         self.set_text_color(44, 75, 100) # Dark Blue
-        self.cell(0, 12, 'TRANSFORMATOR TASARIM RAPORU', border=False, align='C', ln=True)
+        self.cell(0, 12, 'TRANSFORMATOR ON TASARIM RAPORU', border=False, align='C', ln=True)
         
         # Alt Baslik
         self.set_font('helvetica', 'B', 12)
         self.set_text_color(128, 128, 128)
-        self.cell(0, 8, 'TEKNIK SARTNAME VE SIPARIS FORMU / URETIM FOYU', border=False, align='C', ln=True)
+        self.cell(0, 8, 'MUHENDISLIK TARAMASI / SCREENING', border=False, align='C', ln=True)
         
         # Yesil cizgi
         self.set_draw_color(46, 160, 67) # Green
@@ -84,21 +86,21 @@ def generate_engineering_pdf(data: dict, output_path: str = "rapor.pdf") -> str:
 
     # 1. TABLO
     draw_header('GENEL VE ELEKTRIKSEL BILGILER')
-    draw_row('Kalite', 'IEC 60076 / TSE', 'Uygulama', 'Dagitim Transformatoru')
+    draw_row('Referans', data.get('standard', 'IEC 60076'), 'Uygulama', 'Dagitim Transformatoru')
     draw_row('Guc Degeri (kVA)', f'{data["s_rated_kva"]:g}', 'Faz Sayisi', '3 Fazli')
     draw_row('Primer Gerilimi (V)', f'{data["v_hv"]:g}', 'Sekonder Gerilimi (V)', f'{data["v_lv"]:g}')
-    draw_row('Frekans (Hz)', '50', 'Sargi Turu', 'Standart')
-    draw_row('Baglanti Grubu', 'Dyn11', 'Kademe', '+/- 2x2.5%')
+    draw_row('Frekans (Hz)', f"{data.get('frequency_hz', 50):g}", 'Sargi Turu', 'Standart')
+    draw_row('Baglanti Grubu', data.get('connection_group', 'Dyn11'), 'Kademe', 'Siparis verisine gore')
     draw_row('Primer Akimi (A)', f'{data.get("i_hv", 0):.2f}', 'Sekonder Akimi (A)', f'{data.get("i_lv", 0):.2f}')
     pdf.ln(5)
     
     # 2. TABLO
     draw_header('YAPI VE TASARIM PARAMETRELERI')
     draw_row('Sargi Malzemesi', f'{data["hv_mat"]} / {data["lv_mat"]}', 'Kademe Degistirici', 'Yuksuz')
-    draw_row('Sogutma', 'ONAN', 'Empedans (% @75C)', f'{data["uk_percent"]}')
+    draw_row('Sogutma', data.get('cooling_method', 'ONAN'), 'Empedans (% @75C)', f'{data["uk_percent"]}')
     draw_row('Izolasyon Yagi Tipi', data["oil_type"], 'Izolasyon Sinifi', 'A Sinifi')
-    draw_row('Koruma Derecesi (IP)', 'IP00', 'Ortam Sicakligi (C)', '40')
-    draw_row('Sertifikasyon', 'TSE', 'Yuzey Rengi (RAL)', 'RAL 7033')
+    draw_row('Koruma Derecesi (IP)', data.get('protection_degree', '-'), 'Ortam Sicakligi (C)', f"{data.get('ambient_c', 40):g}")
+    draw_row('Sertifikasyon', 'Dogrulanmadi', 'Yuzey Rengi (RAL)', 'Sipariste belirlenecek')
     pdf.ln(5)
     
     # 3. TABLO
@@ -121,7 +123,12 @@ def generate_engineering_pdf(data: dict, output_path: str = "rapor.pdf") -> str:
     # 5. TABLO
     draw_header('KAYIPLAR VE MALIYET RAPORU')
     draw_row('Bosta (Demir) Kaybi', f'{data["p_no_load_w"]:g} W', 'Yukte (Bakir) Kaybi', f'{data["p_load_w"]:g} W')
-    draw_row('Tam Yukte Verim', f'% {data.get("eff", 0)*100:.2f}', 'Kisa Devre Isi Limiti', 'Gecildi')
+    draw_row(
+        'Tam Yukte Verim',
+        f'% {data.get("eff", 0)*100:.2f}',
+        'Tasarim Durumu',
+        data.get('design_status', 'On Tasarim'),
+    )
     draw_row('Tahmini Fabrika Maliyeti', f'$ {data.get("cost_total", 0):,.2f}', 'TOC (20 Yil Isletme)', f'$ {data.get("toc_total", 0):,.2f}')
     pdf.ln(8)
     
@@ -140,11 +147,11 @@ def generate_engineering_pdf(data: dict, output_path: str = "rapor.pdf") -> str:
     pdf.set_text_color(180, 50, 0) # Darker Orange/Red
     
     notes = [
-        "- Bu rapor Antigravity Muh. Motoru tarafindan uretilmistir.",
+        "- Bu rapor Transformer Design Engine tarafindan uretilmistir.",
         "- Radyator tasariminda 1 dilim = 0.32 m2 (800mm x 200mm) olarak kabul edilmistir.",
         "- TOC hesaplamalari girilen A ve B cezai faktorlerine gore yapilmistir.",
         "- Cekirdek kesim olculeri (Step-Lap) arayuz Imalat sekmesinden alinmalidir.",
-        "- Imalat esnasinda %5 tolere edilebilir hata payi mevcuttur."
+        "- Sonuclar tarama amaclidir; tip testi, FEA/CFD ve uretim onayi yerine gecmez."
     ]
     
     pdf.rect(box_x, box_y, 190, len(notes) * 6 + 6)
@@ -155,3 +162,17 @@ def generate_engineering_pdf(data: dict, output_path: str = "rapor.pdf") -> str:
         
     pdf.output(output_path)
     return output_path
+
+
+def generate_engineering_pdf_bytes(data: dict) -> bytes:
+    """Generate a report without leaving a PDF artifact in the project directory."""
+    handle = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    temp_path = handle.name
+    handle.close()
+    try:
+        generate_engineering_pdf(data, temp_path)
+        with open(temp_path, "rb") as pdf_file:
+            return pdf_file.read()
+    finally:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)

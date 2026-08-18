@@ -1,9 +1,10 @@
 from typing import Dict, Any, List
-from ..units import Q_
 import math
 
 def calculate_turns(v_phase: Any, e_turn_initial: Any) -> Dict[str, Any]:
     """Sargı tur sayısını hesaplar ve yuvarlar."""
+    if v_phase.to("V").magnitude <= 0 or e_turn_initial.to("V").magnitude <= 0:
+        raise ValueError("Gerilim değerleri pozitif olmalıdır.")
     n_raw = (v_phase / e_turn_initial).to_base_units().magnitude
     n_selected = round(n_raw)
     
@@ -75,14 +76,22 @@ def calculate_conductor_dimensions(
     parallel_count: int = 1
 ) -> Dict[str, Any]:
     """İletken kesitini ve gerçek akım yoğunluğunu hesaplar."""
+    if i_design.to("A").magnitude <= 0 or j_target.to("A/mm**2").magnitude <= 0:
+        raise ValueError("Akım ve akım yoğunluğu pozitif olmalıdır.")
+    if parallel_count < 1:
+        raise ValueError("Paralel iletken sayısı en az 1 olmalıdır.")
     a_min = i_design / j_target
     
     if shape == "Round":
         d = dims.get('diameter')
+        if d is None or d.to("mm").magnitude <= 0:
+            raise ValueError("Yuvarlak iletken çapı pozitif olmalıdır.")
         a_single = math.pi * (d ** 2) / 4
     elif shape in ["Rectangular", "Foil"]:
         w = dims.get('width')
         t = dims.get('thickness')
+        if w is None or t is None or w.to("mm").magnitude <= 0 or t.to("mm").magnitude <= 0:
+            raise ValueError("İletken genişlik ve kalınlığı pozitif olmalıdır.")
         a_single = w * t
     else:
         raise ValueError("Bilinmeyen iletken şekli")
@@ -137,7 +146,15 @@ def calculate_winding_layers(
     wire_dimension_axial: Telin yükseklik (sarım) yönündeki yalıtımlı ölçüsü.
     wire_dimension_radial: Telin kalınlık (radyal) yönündeki yalıtımlı ölçüsü.
     """
+    if total_turns <= 0:
+        raise ValueError("Toplam tur sayısı pozitif olmalıdır.")
+    if min(winding_height_mm, wire_dimension_axial_mm, wire_dimension_radial_mm) <= 0:
+        raise ValueError("Sargı geometrisi pozitif olmalıdır.")
+    if margin_mm < 0 or paper_thickness_mm < 0:
+        raise ValueError("Kenar payı ve kâğıt kalınlığı negatif olamaz.")
     effective_height = winding_height_mm - (2 * margin_mm)
+    if effective_height <= 0:
+        raise ValueError("Sargı yüksekliği toplam kenar payından büyük olmalıdır.")
     turns_per_layer = math.floor(effective_height / wire_dimension_axial_mm)
     
     if turns_per_layer <= 0:

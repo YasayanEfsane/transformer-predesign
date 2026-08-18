@@ -45,8 +45,5 @@ def test_window_area():
     
     res = calculate_window_area(turns_hv, a_cond_hv, turns_lv, a_cond_lv, topology_factor=1.0, k_u_target=0.35)
     
-    q_window = 1000 * 5 + 100 * 50
-    a_req = 10000 / 0.35
-    
     assert pytest.approx(res["q_window"].magnitude, 0.1) == 10000
     assert pytest.approx(res["a_window_required"].magnitude, 0.1) == 28571.4

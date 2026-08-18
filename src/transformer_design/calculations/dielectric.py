@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict
 
 def get_basic_insulation_level(voltage_v: float) -> float:
     """

@@ -1,7 +1,6 @@
 import re
-from typing import Tuple, Dict, Any
+from typing import Dict, Any
 from ..exceptions import UnsupportedConnectionGroupError
-from ..units import Q_
 
 def parse_connection_group(connection_group: str) -> Dict[str, Any]:
     """Bağlantı grubunu ayrıştırır (örneğin: Dyn11)."""

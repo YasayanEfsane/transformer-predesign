@@ -1,5 +1,59 @@
-import math
 from transformer_design.models.enums import ConductorMaterial
+
+
+def _temperature_color(temperature_c: float, minimum_c: float = 20.0, maximum_c: float = 140.0) -> str:
+    """Map a screening temperature to a blue-yellow-red SVG color."""
+    ratio = max(0.0, min(1.0, (temperature_c - minimum_c) / (maximum_c - minimum_c)))
+    if ratio < 0.5:
+        local = ratio * 2.0
+        red = int(59 + (250 - 59) * local)
+        green = int(130 + (204 - 130) * local)
+        blue = int(246 + (21 - 246) * local)
+    else:
+        local = (ratio - 0.5) * 2.0
+        red = int(250 + (220 - 250) * local)
+        green = int(204 + (38 - 204) * local)
+        blue = int(21 + (38 - 21) * local)
+    return f"#{red:02x}{green:02x}{blue:02x}"
+
+
+def generate_thermal_heatmap_svg(
+    ambient_temperature_c: float,
+    top_oil_temperature_c: float,
+    hot_spot_temperature_c: float,
+) -> str:
+    """Render a compact, temperature-driven transformer cross-section."""
+    ambient_color = _temperature_color(ambient_temperature_c)
+    oil_color = _temperature_color(top_oil_temperature_c)
+    winding_color = _temperature_color(hot_spot_temperature_c)
+    return f"""
+    <svg width="100%" viewBox="0 0 760 420" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="shadow"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-opacity="0.18"/></filter>
+      </defs>
+      <rect width="760" height="420" rx="24" fill="#f8fafc"/>
+      <rect x="75" y="55" width="610" height="310" rx="22" fill="{ambient_color}" opacity="0.24" stroke="#64748b" stroke-width="5"/>
+      <rect x="92" y="100" width="576" height="248" rx="15" fill="{oil_color}" opacity="0.58"/>
+      <g filter="url(#shadow)">
+        <rect x="190" y="85" width="380" height="45" rx="8" fill="#475569"/>
+        <rect x="190" y="290" width="380" height="45" rx="8" fill="#475569"/>
+        <rect x="225" y="105" width="46" height="205" rx="5" fill="#64748b"/>
+        <rect x="357" y="105" width="46" height="205" rx="5" fill="#64748b"/>
+        <rect x="489" y="105" width="46" height="205" rx="5" fill="#64748b"/>
+        <g fill="none" stroke="{winding_color}" stroke-width="24">
+          <rect x="202" y="138" width="92" height="142" rx="28"/>
+          <rect x="334" y="138" width="92" height="142" rx="28"/>
+          <rect x="466" y="138" width="92" height="142" rx="28"/>
+        </g>
+      </g>
+      <g font-family="Inter, system-ui, sans-serif" fill="#0f172a">
+        <text x="105" y="82" font-size="17" font-weight="700">Dinamik Termal Kesit</text>
+        <text x="105" y="386" font-size="15">Ortam: {ambient_temperature_c:.1f} °C</text>
+        <text x="310" y="386" font-size="15">Üst yağ: {top_oil_temperature_c:.1f} °C</text>
+        <text x="525" y="386" font-size="15" font-weight="700">Hot-spot: {hot_spot_temperature_c:.1f} °C</text>
+      </g>
+    </svg>
+    """
 
 def generate_transformer_svg(hv_mat, lv_mat, hv_turns, lv_turns, hv_area_mm2, lv_area_mm2, core_diameter_mm):
     """
@@ -47,7 +101,7 @@ def generate_transformer_svg(hv_mat, lv_mat, hv_turns, lv_turns, hv_area_mm2, lv
     lv_pattern_size = max(4.0, min(20.0, 10000.0 / (lv_turns + 1.0)))
     
     css = f"""
-    <style>
+    {""}<style>
         .tank-bg {{ fill: #f1f5f9; stroke: #94a3b8; stroke-width: 4px; rx: 10px; }}
         .oil-bg {{ fill: #fef3c7; opacity: 0.5; }}
         .oil-wave {{ stroke: #fde68a; stroke-width: 2px; stroke-dasharray: 10, 5; }}

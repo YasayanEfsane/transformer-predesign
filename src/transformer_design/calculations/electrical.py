@@ -1,10 +1,13 @@
 from typing import Dict, Any, Optional
-from ..units import Q_
 from ..exceptions import PhysicallyInconsistentDataError
 import math
 
 def calculate_rated_currents(s_rated: Any, v_hv_line: Any, v_lv_line: Any) -> Dict[str, Any]:
     """Hat akımlarını hesaplar."""
+    if s_rated.to("VA").magnitude <= 0:
+        raise ValueError("Anma gücü pozitif olmalıdır.")
+    if v_hv_line.to("V").magnitude <= 0 or v_lv_line.to("V").magnitude <= 0:
+        raise ValueError("Hat gerilimleri pozitif olmalıdır.")
     i_hv_line = s_rated / (v_hv_line * (3 ** 0.5))
     i_lv_line = s_rated / (v_lv_line * (3 ** 0.5))
     return {
@@ -22,7 +25,16 @@ def calculate_impedance_components(
 ) -> Dict[str, Any]:
     """Empedans bileşenlerini hesaplar (pu ve ohm olarak)."""
     z_pu = u_k_percent / 100.0
-    r_pu = p_load_rated.to('W').magnitude / s_rated.to('VA').magnitude
+    if not 0 < u_k_percent <= 100:
+        raise ValueError("Kısa devre empedansı 0 ile 100 yüzde arasında olmalıdır.")
+    if s_rated.to("VA").magnitude <= 0:
+        raise ValueError("Anma gücü pozitif olmalıdır.")
+    total_load_loss_w = p_load_rated.to('W').magnitude
+    if not is_load_loss_total:
+        total_load_loss_w *= 3
+    if total_load_loss_w < 0:
+        raise ValueError("Yük kaybı negatif olamaz.")
+    r_pu = total_load_loss_w / s_rated.to('VA').magnitude
         
     if r_pu > z_pu:
         raise PhysicallyInconsistentDataError(f"Direnç bileşeni ({r_pu}) toplam empedanstan ({z_pu}) büyük olamaz.")
@@ -46,6 +58,8 @@ def calculate_impedance_components(
 
 def calculate_short_circuit(i_rated_line: Any, s_rated: Any, z_pu: float) -> Dict[str, Any]:
     """Sonsuz güçlü şebeke kabulüyle kısa devre akımını ve gücünü hesaplar."""
+    if z_pu <= 0:
+        raise ValueError("Birim kısa devre empedansı pozitif olmalıdır.")
     i_sc_line = i_rated_line / z_pu
     s_sc = s_rated / z_pu
     return {
@@ -61,6 +75,12 @@ def calculate_efficiency(
     power_factor: float = 1.0
 ) -> Dict[str, Any]:
     """Verim hesaplar."""
+    if not 0 < load_fraction <= 2:
+        raise ValueError("Yük katsayısı 0 ile 2 arasında olmalıdır.")
+    if not 0 < power_factor <= 1:
+        raise ValueError("Güç faktörü 0 ile 1 arasında olmalıdır.")
+    if p_no_load.to("W").magnitude < 0 or p_load_rated.to("W").magnitude <= 0:
+        raise ValueError("Kayıplar fiziksel olarak geçerli olmalıdır.")
     p_output = s_rated.to('W') * load_fraction * power_factor
     p_load_at_fraction = p_load_rated * (load_fraction ** 2)
     
@@ -83,6 +103,8 @@ def calculate_voltage_regulation(
     is_inductive: bool = True
 ) -> float:
     """Gerilim regülasyonunu (pu) hesaplar."""
+    if not 0 <= power_factor <= 1:
+        raise ValueError("Güç faktörü 0 ile 1 arasında olmalıdır.")
     sin_phi = math.sqrt(1 - power_factor**2)
     if is_inductive:
         regulation_pu = r_pu * power_factor + x_pu * sin_phi
@@ -131,6 +153,19 @@ def calculate_leakage_impedance(
     Rogowski katsayısı (K_r) dikkate alınarak IEC standartlarına 
     göre gerçek kısa devre empedansını (%uk) hesaplar.
     """
+    positive_values = (
+        freq_hz,
+        turns,
+        v_phase,
+        s_rated_va_per_phase,
+        h_winding_mm,
+        mean_diameter_gap_mm,
+        gap_width_mm,
+        lv_thickness_mm,
+        hv_thickness_mm,
+    )
+    if any(value <= 0 for value in positive_values):
+        raise ValueError("Kaçak empedans girdileri pozitif olmalıdır.")
     mu_0 = 4 * math.pi * 1e-7
     
     # Metre cinsine çevir
@@ -158,4 +193,3 @@ def calculate_leakage_impedance(
     uk_percent = uk_pu * 100.0
     
     return uk_percent
-

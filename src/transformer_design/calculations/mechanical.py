@@ -1,6 +1,5 @@
 import math
 from typing import Dict, Any
-from ..units import Q_
 
 # Manyetik Geçirgenlik
 MU_0 = 4 * math.pi * 1e-7

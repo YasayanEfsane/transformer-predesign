@@ -21,7 +21,7 @@ def test_parse_connection_group():
     res = parse_connection_group("Dyn11")
     assert res["hv_connection"] == "D"
     assert res["lv_connection"] == "y"
-    assert res["lv_neutral_brought_out"] == True
+    assert res["lv_neutral_brought_out"] is True
     assert res["clock_number"] == 11
     assert res["phase_shift_deg"] == 330
     

@@ -1,3 +1,3 @@
-"""Üç Fazlı Dağıtım Transformatörü Matematik ve Ön Tasarım Kütüphanesi."""
+"""Üç fazlı dağıtım transformatörü ön tasarım kütüphanesi."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

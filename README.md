@@ -1,98 +1,159 @@
-# Transformatör Ön Tasarım Motoru (Transformer Design Engine)
+# Transformer Design Engine
 
-Bu proje, 3 fazlı dağıtım transformatörleri için elektromanyetik, mekanik, termal ve maliyet parametrelerini eşzamanlı olarak hesaplayan, doğrulayan ve optimize eden bir **Ön Tasarım ve Simülasyon Motorudur**.
+Üç fazlı, üç bacaklı dağıtım transformatörleri için elektromanyetik, geometrik, termal, mekanik ve maliyet hesaplarını tek bir doğrulanmış akışta birleştiren ön tasarım motoru.
 
-Uygulama, hem mühendisler için matematiksel bir altyapı (Python SDK) sunar hem de kullanıcı dostu bir web arayüzü (Streamlit) ile interaktif analiz yapmaya olanak tanır.
+Proje iki kullanım biçimi sunar:
 
-##  Temel Özellikler
+- Python API ve CLI ile tekrarlanabilir mühendislik hesapları
+- Streamlit ile modern, etkileşimli tasarım ve karşılaştırma arayüzü
 
-- **Elektromanyetik & Fizik Motoru:**
-  - Sargı tasarımı (Bakır / Alüminyum, HV / LV)
-  - Çekirdek tasarımı (Silisli Sac, 3 Bacaklı)
-  - Empedans, boşta/yükte kayıplar, verim ve gerilim düşümü hesaplamaları.
-- **Gerçek Zamanlı Maliyet (LME) ve Ağırlık Analizi:**
-  - Güncel veya manuel girilen hammadde (LME) fiyatlarına göre İmalat Maliyeti hesabı.
-  - TOC (Total Ownership Cost) ve Ceza Faktörleri (A/B faktörleri) destekli A/B tasarımı testi.
-- **Dinamik Termal Simülasyon (Ön Tahmin):**
-  - **IEC 60076-7** standardındaki üstel (exponential) sıcaklık geçiş formüllerine dayalı simülasyon.
-  - Zamana bağlı 24 saatlik yük (% load) ve ortam sıcaklığı profillerini işleyerek **Üst Yağ (Top-Oil)** ve **Hot-Spot** sıcaklıklarının dinamik hesabını yapar.
-  - Zaman kaydırıcısı (slider) ile günün her anı için anlık SVG Isı Haritası görselleştirme.
-- **İnteraktif SVG Şema & Isı Haritası:**
-  - Hesaplanan fiziksel boyutlara (çekirdek çapı, et kalınlığı, yalıtım boşlukları) göre gerçekçi dinamik SVG transformatör kesiti.
-  - Termal simülasyondan alınan sıcaklık değerlerine göre renk değiştiren termal ısı haritası.
-- **PDF Mühendislik Raporu:**
-  - Tasarım sonuçlarını (boyutlar, verim, kayıplar, kütleler vb.) temiz bir mühendislik dökümanı olarak PDF formatında çıktı alma imkanı.
-- **Parametrik Optimizasyon:**
-  - Grid-search yöntemiyle Akı (T), HV ve LV Akım Yoğunluğu (A/mm²) üzerinden en uygun maliyetli TOC değerini veren tasarımı bulma.
+> [!IMPORTANT]
+> Bu yazılım bir **ön tasarım ve seçenek tarama aracıdır**. IEC uygunluk belgesi, ayrıntılı üretim tasarımı, FEA/CFD, kısa devre dayanım doğrulaması veya tip testi yerine geçmez.
 
----
+## Öne çıkan yetenekler
 
-##  Kurulum
+- Pydantic tabanlı fiziksel girdi doğrulaması
+- Dyn11, Yyn0 ve Dd0 bağlantıları için hat/faz dönüşümleri
+- Tur başına gerilim, çekirdek kesiti, akı yoğunluğu ve tur sayısı hesabı
+- HV yuvarlak tel ve LV folyo için kesit ve sarım reçetesi
+- Verim, kısa devre akımı ve Rogowski katsayılı yaklaşık kaçak empedans
+- Yaklaşık radyal/eksenel kuvvet, dielektrik açıklık ve akustik tarama
+- Tank/radyatör alanı, hot-spot ve 24 saatlik dinamik termal profil
+- Üst yağ/hot-spot grafiği, sıcaklığa bağlı SVG ısı haritası ve yaşlanma katsayısı
+- Deterministik malzeme fiyatlarıyla ağırlık, imalat maliyeti ve TOC
+- Akı yoğunluğu ve akım yoğunluğu üzerinde parametrik grid-search optimizasyonu
+- PDF ön tasarım raporu, imalat tabloları ve son 10 tasarım için A/B karşılaştırması
+- GitHub Actions üzerinde test ve temel statik analiz
 
-Proje **Python 3.12+** ve üzeri sürümlerde çalışacak şekilde tasarlanmıştır.
+## Kurulum
 
-1. **Bağımlılıkları Yükleyin:**
-   Projenin ana bağımlılıklarını kurmak için komut satırından aşağıdaki komutları çalıştırın:
-   ```bash
-   pip install pydantic Pint pytest pandas streamlit fpdf2
-   ```
+Python 3.12 veya üzeri gereklidir.
 
-2. **Geliştirici Modunda Yükleme (Opsiyonel):**
-   Projenin kök dizininde `pyproject.toml` mevcuttur. Dilerseniz paketi düzenlenebilir (editable) modda kurabilirsiniz:
-   ```bash
-   pip install -e .
-   ```
+Yalnızca hesap motoru:
 
----
+```bash
+python -m pip install -e .
+```
 
-## Nasıl Çalıştırılır?
+Web arayüzü ve PDF raporu dahil:
 
-### 1. Kullanıcı Arayüzü (Web - Streamlit)
-Uygulamanın grafiksel arayüzüne erişmek için proje kök dizininde şu komutu çalıştırın:
+```bash
+python -m pip install -e ".[ui]"
+```
+
+Geliştirme araçlarıyla birlikte:
+
+```bash
+python -m pip install -e ".[ui,dev]"
+```
+
+## Çalıştırma
+
+### Web arayüzü
+
 ```bash
 python -m streamlit run streamlit_app.py
 ```
-> Komutu çalıştırdıktan sonra tarayıcınızda otomatik olarak açılmazsa, terminalde belirtilen `http://localhost:8501` adresine giderek erişebilirsiniz.
 
-### 2. Arayüz Kullanım Adımları:
-1. **Sol Menü:** Sipariş özelliklerini (kVA, Yüksek/Alçak Gerilim, uk%, boşta/yükte kayıplar) ve tasarım limitlerini (Akı Yoğunluğu, Akım Yoğunluğu, İletken Tipi vb.) belirleyin.
-2. **Hesapla Butonu:**  "Hesapla" butonuna basarak mühendislik hesaplamalarını çalıştırın.
-3. **Sekmeler (Tabs):** 
-   - Geometri ve Elektriksel KPI'ları inceleyin.
-   - **Görsel Şema:** Fiziksel kesitleri interaktif olarak inceleyin (fare ile sargıların üzerine gelip tooltip görebilirsiniz).
-   - **İmalat Reçetesi:** Ustalar için sarım tur/et kalınlığı bilgilerini ve sac kesim ölçülerini görün.
-   - **Dinamik Termal Simülasyon:** İstediğiniz zaman-yük profili üzerinden dinamik termal değişim simülasyonu çalıştırıp SVG animasyonu ve çizgi grafikleri inceleyin.
+Arayüzde sol panelden sipariş, aktif kısım, termal ve maliyet girdileri belirlenir. **Tasarımı hesapla** tek bir tasarımı çözer; **Parametrik optimize et** ise tanımlı akı ve akım yoğunluğu adaylarını TOC'ye göre tarar.
 
----
+Dinamik termal sekmesindeki 24 saatlik yük ve ortam tablosu düzenlenebilir. Simülasyon sonunda:
 
-##  Proje Yapısı
+- ortam, üst yağ ve hot-spot sıcaklık eğrileri,
+- seçilen saate ait termal SVG kesiti,
+- tepe sıcaklıklar ve eşdeğer yaşlanma toplamı
 
-```
-transformer_design/
-├── src/transformer_design/
-│   ├── calculations/          # Fizik, elektrik, mekanik ve kayıp hesaplama fonksiyonları
-│   ├── models/                # Pydantic tabanlı veri yapıları (girdiler, sonuçlar, termal yapılar)
-│   ├── thermal/               # Dinamik termal simülasyon motoru ve profil yönetimi
-│   ├── reporting/             # PDF raporlama üreticisi (fpdf2)
-│   └── visualization/         # SVG ve Heatmap oluşturma sınıfları
-├── tests/                     # pytest klasörü (matematik, termal doğrulama vb.)
-├── streamlit_app.py           # Streamlit web arayüzü dosyası
-├── pyproject.toml             # Python proje ve paketasyon ayarları
-└── README.md                  # Bu dosya
-```
+görüntülenir.
 
----
+### Komut satırı
 
-##  Testleri Çalıştırma
-
-Kodun doğruluğunu ve fizik motorunun regrese (bozulma) olup olmadığını kontrol etmek için tüm test senaryolarını çalıştırabilirsiniz:
+Paket kurulduktan sonra:
 
 ```bash
-python -m pytest tests/
+transformer-design
 ```
-Özellikle dinamik termal simülasyon için yazılan `test_dynamic_thermal_model.py` ve veri doğrulama için `test_thermal_profile_validation.py` senaryoları mevcuttur.
 
----
+veya doğrudan:
 
-##  Lisans & Uyarılar
-Bu yazılım bir **Ön Tasarım (Screening)** aracıdır. Elde edilen değerler, transformatör üretim standartlarına (IEC/IEEE) uygun olarak tasarımın yönünü belirlemeye yardımcı olur; ancak profesyonel FEA (Sonlu Elemanlar Analizi) veya CFD hesaplamalarının yerine geçmez. Üretim aşamasından önce muhakkak tam kapsamlı tip testi simülasyonlarıyla doğrulanmalıdır.
+```bash
+python cli_app.py
+```
+
+### Python API
+
+```python
+from transformer_design.calculations.engine import synthesize_transformer
+
+# OrderInput örneği için example_usage.py dosyasına bakın.
+result = synthesize_transformer(inputs)
+
+print(result["total_weight"])
+print(result["toc_usd"])
+print(result["warnings"])
+```
+
+`synthesize_transformer` web arayüzü, CLI ve optimizasyon için tek hesaplama kaynağıdır. Malzeme fiyatları verilmezse deterministik varsayılanlar kullanılır; motor kendi içinde internetten fiyat çekmez.
+
+## Dinamik termal model
+
+`simulate_dynamic_thermal`, IEC 60076-7 yaklaşımından esinlenen birinci dereceden üstel geçiş modeli uygular. Her zaman aralığında nihai üst yağ artışı aşağıdaki oranla taranır:
+
+$$
+\Delta\theta_{o,u}=\Delta\theta_{o,r}
+\left(\frac{K^2R+1}{R+1}\right)^x
+$$
+
+Sargı hot-spot gradyanı ise yükle birlikte yaklaşık olarak $K^{2y}$ oranında değişir. Yağ ve sargı sıcaklıkları ayrı zaman sabitleriyle nihai değerlere yaklaşır.
+
+Model; karşılaştırma, yük profili inceleme ve erken risk tespiti içindir. Üreticiye özgü yağ akışı, sargı geometrisi, soğutma donanımı ve deney verileri girilmeden standart uygunluğu iddia etmez.
+
+## Tasarım sağlık kontrolleri
+
+Motor her çözümde dört açık tarama sonucu üretir:
+
+| Kontrol | Varsayılan tarama ölçütü |
+|---|---|
+| Akı yoğunluğu | Gerçek değer ≤ 1,75 T |
+| Amper-sarım dengesi | Bağıl fark ≤ %2 |
+| Kaçak empedans | Hedefin ±max(0,5 puan, %15) aralığı |
+| Hot-spot | Kullanıcının sıcaklık sınırının altında |
+
+Bu eşikler üretim kabul kriteri değil, erken tasarım uyarılarıdır.
+
+## Test ve kalite
+
+```bash
+python -m pytest
+python -m ruff check src tests cli_app.py example_usage.py streamlit_app.py
+```
+
+Testler elektriksel dönüşümleri, çekirdek/sargı fonksiyonlarını, girdi doğrulamasını, ortak motoru, optimizasyon aday sayısını ve dinamik termal geçişleri kapsar.
+
+## Proje yapısı
+
+```text
+.
+├── .github/workflows/quality.yml
+├── src/transformer_design/
+│   ├── calculations/       # Saf hesap fonksiyonları ve ortak engine
+│   ├── models/             # Doğrulanmış sipariş/kabul modelleri
+│   ├── reporting/          # PDF ve SVG üretimi
+│   ├── validation/         # Tasarım durum değerlendirmesi
+│   └── cli.py              # Kurulabilir CLI
+├── tests/
+├── streamlit_app.py
+├── example_usage.py
+└── pyproject.toml
+```
+
+## Bilinen sınırlar
+
+- Üç fazlı ve üç bacaklı dağıtım transformatörleriyle sınırlıdır.
+- Geometri, kaçak empedans, kuvvet, akustik ve dielektrik hesapları tarama seviyesinde ampirik yaklaşımlar içerir.
+- Malzeme fiyatları kullanıcı girdisidir; LME verisi olarak doğrulanmaz.
+- Sac kalitesi eğrileri, harmonikler, girdap/stray kayıpları, detaylı yalıtım koordinasyonu ve üretici toleransları henüz modellenmemiştir.
+- “Uygun” sonucu üretime hazır anlamına gelmez.
+
+## Lisans
+
+[MIT](LICENSE)

@@ -23,9 +23,11 @@ from .winding import (
     check_ampere_turns,
 )
 from .thermal import (
+    calculate_hot_spot_and_fins,
     calculate_required_cooling_area,
     estimate_tank_surface_area,
     calculate_tank_and_radiator_needs,
+    simulate_dynamic_thermal,
 )
 from .costing import calculate_weights_and_costs
 from .mechanical import calculate_short_circuit_forces
@@ -39,6 +41,7 @@ __all__ = [
     "calculate_core_geometry",
     "calculate_efficiency",
     "calculate_impedance_components",
+    "calculate_hot_spot_and_fins",
     "calculate_net_core_area",
     "calculate_no_load_equivalent",
     "calculate_rated_currents",
@@ -46,6 +49,7 @@ __all__ = [
     "calculate_resistance_and_loss",
     "calculate_short_circuit",
     "calculate_short_circuit_forces",
+    "simulate_dynamic_thermal",
     "calculate_tank_and_radiator_needs",
     "calculate_weights_and_costs",
     "run_grid_search_optimizer",

@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.streamlit/secrets.toml
+.venv/
+build/
+dist/
+crash.log
+rapor.pdf
+transformer_pre_design_report.pdf
