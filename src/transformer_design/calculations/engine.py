@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from ..models.assumptions import DesignAssumptions
-from ..models.enums import CoreTopology, PhaseSystem
+from ..models.enums import CoreTopology, PhaseSystem, LossEvaluationMode
 from ..models.inputs import OrderInput
 from ..units import Q_
 from .acoustics import calculate_acoustic_noise
@@ -28,6 +28,14 @@ from .electrical import (
     calculate_short_circuit,
 )
 from .mechanical import calculate_short_circuit_forces
+from .losses import (
+    calculate_dc_resistance,
+    calculate_i2r_losses,
+    calculate_load_losses,
+    estimate_core_losses,
+)
+from .taps import calculate_tap_turns, calculate_voltage_regulation
+
 from .thermal import (
     calculate_hot_spot_and_fins,
     calculate_required_cooling_area,
@@ -175,10 +183,6 @@ def synthesize_transformer(
         lv_foil_thickness_mm,
     )
 
-    no_load_loss = Q_(inputs.electrical.no_load_loss_W, "W")
-    load_loss = Q_(inputs.electrical.load_loss_W, "W")
-    total_loss = no_load_loss + load_loss
-    efficiency = calculate_efficiency(rated_power, no_load_loss, load_loss)
     impedance_pu = inputs.electrical.rated_short_circuit_impedance_percent / 100.0
     short_circuit = calculate_short_circuit(
         line_currents["i_hv_line"], rated_power, impedance_pu
@@ -204,23 +208,6 @@ def synthesize_transformer(
         * (active_height_mm + 200.0)
         * (active_depth_mm + 200.0)
         * 1e-9
-    )
-    required_cooling_area = calculate_required_cooling_area(
-        total_loss,
-        Q_(inputs.insulation.top_oil_temp_rise_limit_K, "kelvin"),
-        Q_(heat_dissipation_w_m2k, "W/(m**2 * kelvin)"),
-    )
-    cooling = calculate_tank_and_radiator_needs(required_cooling_area, tank_surface)
-    average_current_density = (
-        hv_conductor["j_actual"].magnitude + lv_conductor["j_actual"].magnitude
-    ) / 2.0
-    hot_spot = calculate_hot_spot_and_fins(
-        cooling["radiator_area_needed"].magnitude,
-        inputs.insulation.top_oil_temp_rise_limit_K,
-        average_current_density,
-    )
-    hot_spot_temperature_c = (
-        inputs.general.ambient_temperature_C + hot_spot["hot_spot_rise_k"]
     )
 
     costs = calculate_weights_and_costs(
@@ -255,6 +242,80 @@ def synthesize_transformer(
         lv_radial_build_mm,
         hv_radial_build_mm,
     )
+    lv_mtl = inputs.winding.lv_mean_turn_length_m
+    if lv_mtl is None:
+        lv_mtl = math.pi * (core_diameter_mm + 20.0 + lv_radial_build_mm) / 1000.0
+    hv_mtl = inputs.winding.hv_mean_turn_length_m
+    if hv_mtl is None:
+        hv_mtl = math.pi * (core_diameter_mm + 20.0 + 2 * lv_radial_build_mm + 2 * winding_gap_mm + hv_radial_build_mm) / 1000.0
+
+    lv_r_dc = calculate_dc_resistance(
+        lv_turns["n_selected"], lv_mtl, lv_conductor["a_selected_total"].to("mm**2").magnitude, inputs.winding.lv_conductor_material
+    )
+    hv_r_dc = calculate_dc_resistance(
+        hv_turns["n_selected"], hv_mtl, hv_conductor["a_selected_total"].to("mm**2").magnitude, inputs.winding.hv_conductor_material
+    )
+
+    lv_i2r = calculate_i2r_losses(lv_phase_current.magnitude, lv_r_dc)
+    hv_i2r = calculate_i2r_losses(hv_phase_current.magnitude, hv_r_dc)
+
+    calc_load_losses_dict = calculate_load_losses(
+        hv_i2r, lv_i2r, inputs.winding.additional_load_loss_factor
+    )
+    calc_no_load_loss_W = estimate_core_losses(
+        costs["weights_kg"]["core"],
+        actual_flux.to("T").magnitude,
+        frequency_hz,
+        inputs.core.core_steel_grade,
+        inputs.core.additional_no_load_loss_factor
+    )
+
+    calculated_losses = {
+        "lv_mean_turn_length_m": lv_mtl,
+        "hv_mean_turn_length_m": hv_mtl,
+        "lv_r_dc_ohms": lv_r_dc,
+        "hv_r_dc_ohms": hv_r_dc,
+        **calc_load_losses_dict,
+        "calculated_no_load_loss_W": calc_no_load_loss_W,
+    }
+
+    if inputs.electrical.loss_evaluation_mode == LossEvaluationMode.CALCULATED:
+        eval_no_load_loss_W = calc_no_load_loss_W
+        eval_load_loss_W = calc_load_losses_dict["calculated_load_loss_W"]
+    else:
+        eval_no_load_loss_W = inputs.electrical.no_load_loss_W
+        eval_load_loss_W = inputs.electrical.load_loss_W
+
+    no_load_loss = Q_(eval_no_load_loss_W, "W")
+    load_loss = Q_(eval_load_loss_W, "W")
+    total_loss = no_load_loss + load_loss
+    efficiency = calculate_efficiency(rated_power, no_load_loss, load_loss)
+
+    required_cooling_area = calculate_required_cooling_area(
+        total_loss,
+        Q_(inputs.insulation.top_oil_temp_rise_limit_K, "kelvin"),
+        Q_(heat_dissipation_w_m2k, "W/(m**2 * kelvin)"),
+    )
+    cooling = calculate_tank_and_radiator_needs(required_cooling_area, tank_surface)
+    average_current_density = (
+        hv_conductor["j_actual"].magnitude + lv_conductor["j_actual"].magnitude
+    ) / 2.0
+    hot_spot = calculate_hot_spot_and_fins(
+        cooling["radiator_area_needed"].magnitude,
+        inputs.insulation.top_oil_temp_rise_limit_K,
+        average_current_density,
+    )
+    hot_spot_temperature_c = (
+        inputs.general.ambient_temperature_C + hot_spot["hot_spot_rise_k"]
+    )
+
+    tap_results = {}
+    if inputs.electrical.tap_percentages is not None:
+        tap_results = calculate_tap_turns(hv_turns["n_selected"], inputs.electrical.tap_percentages)
+    
+    u_r_percent = (eval_load_loss_W / (power_kva * 1000.0)) * 100.0
+    voltage_regulation = calculate_voltage_regulation(physical_impedance_percent, u_r_percent)
+
     mechanical = calculate_short_circuit_forces(
         power_kva,
         inputs.electrical.hv_voltage_V,
@@ -288,11 +349,20 @@ def synthesize_transformer(
     }
     warnings = [message for key, message in warning_messages.items() if not design_checks[key]]
 
+    if inputs.electrical.no_load_loss_W > 0:
+        if abs(calc_no_load_loss_W - inputs.electrical.no_load_loss_W) / inputs.electrical.no_load_loss_W > 0.10:
+            warnings.append(f"Hesaplanan boşta kayıp ({calc_no_load_loss_W:.1f} W) garanti edilenden %10'dan fazla sapıyor.")
+    
+    if inputs.electrical.load_loss_W > 0:
+        if abs(calc_load_losses_dict["calculated_load_loss_W"] - inputs.electrical.load_loss_W) / inputs.electrical.load_loss_W > 0.10:
+            warnings.append(f"Hesaplanan yük kaybı ({calc_load_losses_dict['calculated_load_loss_W']:.1f} W) garanti edilenden %10'dan fazla sapıyor.")
+
+
     factory_cost = costs["costs_usd"]["total"]
     toc_usd = (
         factory_cost
-        + inputs.electrical.no_load_loss_W * a_factor
-        + inputs.electrical.load_loss_W * b_factor
+        + eval_no_load_loss_W * a_factor
+        + eval_load_loss_W * b_factor
     )
     return {
         "inputs": inputs,
@@ -332,10 +402,13 @@ def synthesize_transformer(
         "mechanical": mechanical,
         "dielectric": dielectric,
         "acoustics": acoustics,
-        "p_nl_w": inputs.electrical.no_load_loss_W,
-        "p_ll_w": inputs.electrical.load_loss_W,
+        "p_nl_w": eval_no_load_loss_W,
+        "p_ll_w": eval_load_loss_W,
         "oil_type": oil_type,
         "design_checks": design_checks,
         "is_feasible": all(design_checks.values()),
         "warnings": warnings,
+        "calculated_losses": calculated_losses,
+        "taps": tap_results,
+        "voltage_regulation": voltage_regulation,
     }

@@ -32,7 +32,7 @@ from .thermal import (
 from .costing import calculate_weights_and_costs
 from .mechanical import calculate_short_circuit_forces
 from .dielectric import calculate_clearances
-from .optimization import run_grid_search_optimizer
+from .optimization import run_pareto_optimization
 from .acoustics import calculate_acoustic_noise
 
 __all__ = [
@@ -52,7 +52,7 @@ __all__ = [
     "simulate_dynamic_thermal",
     "calculate_tank_and_radiator_needs",
     "calculate_weights_and_costs",
-    "run_grid_search_optimizer",
+    "run_pareto_optimization",
     "calculate_tap_turns",
     "calculate_turn_voltage",
     "calculate_turns",

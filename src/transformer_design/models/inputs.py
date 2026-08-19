@@ -6,7 +6,7 @@ import re
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from .enums import ConductorMaterial, ConductorShape, CoolingMethod, CoreTopology, PhaseSystem
+from .enums import ConductorMaterial, ConductorShape, CoolingMethod, CoreTopology, PhaseSystem, LossEvaluationMode
 
 
 class InputModel(BaseModel):
@@ -56,6 +56,7 @@ class ElectricalInfo(InputModel):
     allowed_voltage_regulation_percent: float | None = Field(None, ge=0, le=100)
     loss_tolerance_percent: float | None = Field(None, ge=0, le=100)
     impedance_tolerance_percent: float | None = Field(None, ge=0, le=100)
+    loss_evaluation_mode: LossEvaluationMode = Field(LossEvaluationMode.GUARANTEED, description="Hesaplarda kullanilacak kayip kaynagi")
 
     @field_validator("connection_group")
     @classmethod
@@ -99,6 +100,7 @@ class WindingInfo(InputModel):
     lv_cooling_channels: int | None = Field(None, ge=0)
     hv_mean_turn_length_m: float | None = Field(None, gt=0)
     lv_mean_turn_length_m: float | None = Field(None, gt=0)
+    additional_load_loss_factor: float = Field(1.15, ge=1.0, description="Eddy/stray kayiplari katsayisi")
 
 
 class CoreInfo(InputModel):
@@ -113,6 +115,7 @@ class CoreInfo(InputModel):
     window_fill_factor: float | None = Field(None, gt=0, le=1)
     window_height_mm: float | None = Field(None, gt=0)
     window_width_mm: float | None = Field(None, gt=0)
+    additional_no_load_loss_factor: float = Field(1.05, ge=1.0, description="Uretim isciligi cekirdek kayip artisi")
 
 
 class InsulationThermalInfo(InputModel):

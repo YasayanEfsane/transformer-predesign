@@ -11,6 +11,10 @@ class DataSource(Enum):
     MANUFACTURER_DATA = "manufacturer_data"
     UNCONFIRMED = "unconfirmed"
 
+class LossEvaluationMode(Enum):
+    GUARANTEED = "guaranteed"
+    CALCULATED = "calculated"
+
 class PhaseSystem(Enum):
     THREE_PHASE = "3-phase"
     SINGLE_PHASE = "1-phase"

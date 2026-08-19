@@ -1,6 +1,9 @@
 """Streamlit front end for the transformer pre-design engine."""
 
 from __future__ import annotations
+import yfinance as yf
+import json
+from datetime import datetime
 
 from copy import deepcopy
 
@@ -10,13 +13,14 @@ from pydantic import ValidationError
 
 from transformer_design.calculations.costing import OIL_TYPES
 from transformer_design.calculations.engine import synthesize_transformer
-from transformer_design.calculations.optimization import run_grid_search_optimizer
+from transformer_design.calculations.optimization import run_pareto_optimization
 from transformer_design.calculations.thermal import simulate_dynamic_thermal
 from transformer_design.models.enums import (
     ConductorMaterial,
     CoolingMethod,
     CoreTopology,
     PhaseSystem,
+    LossEvaluationMode,
 )
 from transformer_design.models.inputs import (
     CoreInfo,
@@ -33,6 +37,16 @@ from transformer_design.reporting.visualizer import (
 )
 
 
+
+@st.cache_data(ttl=3600)
+def get_market_prices():
+    try:
+        cu = yf.Ticker("HG=F").history(period="1d")["Close"].iloc[-1] * 2204.62
+        al = yf.Ticker("ALI=F").history(period="1d")["Close"].iloc[-1]
+        return {"copper": cu, "aluminum": al}
+    except:
+        return {"copper": 9800.0, "aluminum": 2400.0}
+
 st.set_page_config(
     page_title="Transformer Design Engine",
     page_icon="⚡",
@@ -41,7 +55,7 @@ st.set_page_config(
 )
 st.markdown(
     """
-    <style>
+        <style>
       .stApp {
         background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
         color: #0f172a;
@@ -54,8 +68,29 @@ st.markdown(
       [data-testid="stMain"] p,
       [data-testid="stMain"] label,
       [data-testid="stMain"] li {color: #0f172a;}
-      [data-testid="stSidebar"] {background: #0f172a;}
-      [data-testid="stSidebar"] * {color: #e2e8f0;}
+      
+      /* Sidebar */
+      [data-testid="stSidebar"] {
+        background: #0f172a;
+      }
+      [data-testid="stSidebar"] p,
+      [data-testid="stSidebar"] label,
+      [data-testid="stSidebar"] span,
+      [data-testid="stSidebar"] .streamlit-expanderHeader {
+        color: #e2e8f0 !important;
+      }
+      
+      /* Inputs inside Sidebar should be light with dark text for readability */
+      [data-testid="stSidebar"] input,
+      [data-testid="stSidebar"] [data-baseweb="select"] div {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+      }
+      [data-testid="stSidebar"] [data-baseweb="input"],
+      [data-testid="stSidebar"] [data-baseweb="select"] {
+        background-color: #f8fafc !important;
+      }
+      
       [data-testid="stMetric"] {
         background: rgba(255,255,255,.88); border: 1px solid #e2e8f0;
         border-radius: 16px; padding: 14px 16px; box-shadow: 0 8px 28px rgba(15,23,42,.06);
@@ -66,6 +101,7 @@ st.markdown(
       [data-baseweb="tab"][aria-selected="true"] p {color: #ef4444 !important;}
       [data-testid="stAlert"] p {color: #1f2937 !important;}
       [data-testid="stCaptionContainer"] p {color: #64748b !important;}
+      
       .hero {
         padding: 24px 28px; border-radius: 22px; color: white; margin-bottom: 18px;
         background: linear-gradient(120deg, #0f172a, #1d4ed8 62%, #06b6d4);
@@ -74,10 +110,39 @@ st.markdown(
       .hero h1 {margin: 0 0 8px 0; font-size: 2.1rem; color: #ffffff !important;}
       .hero p {margin: 0; color: #dbeafe !important;}
       .screening-note {font-size: .9rem; color: #64748b !important;}
+      
+      .market-ticker {
+          position: fixed;
+          top: 10px;
+          right: 20px;
+          background-color: #0f172a;
+          color: #f8fafc;
+          padding: 8px 15px;
+          border-radius: 8px;
+          font-weight: bold;
+          font-size: 14px;
+          z-index: 9999999;
+          border: 1px solid #334155;
+          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+      }
+      
+      @media (max-width: 768px) {
+          .stApp { padding: 0.5rem; }
+          .hero h1 { font-size: 1.5rem; }
+          [data-testid="stSidebar"] { min-width: 100%; }
+      }
     </style>
+
     """,
     unsafe_allow_html=True,
 )
+prices = get_market_prices()
+st.markdown(f'''
+    <div class="market-ticker">
+        📈 LME Bakır: ${prices["copper"]:,.0f}/t &nbsp;|&nbsp; 📈 LME Alüminyum: ${prices["aluminum"]:,.0f}/t
+    </div>
+''', unsafe_allow_html=True)
+
 st.markdown(
     """
     <section class="hero">
@@ -101,54 +166,59 @@ def build_order_input(values: dict[str, object]) -> OrderInput:
     return OrderInput(
         general=GeneralInfo(
             standard="IEC 60076",
-            standard_edition="Güncel proje baskısı",
-            application_type="Dağıtım",
+            standard_edition="project",
+            application_type="Distribution",
             phase_system=PhaseSystem.THREE_PHASE,
+            indoor_outdoor="Outdoor",
+            protection_degree="IP00",
+            tank_type="Corrugated",
             rated_power_kVA=values["power_kva"],
             rated_frequency_Hz=values["frequency_hz"],
             cooling_method=CoolingMethod.ONAN,
-            indoor_outdoor="Outdoor",
             ambient_temperature_C=values["ambient_c"],
             altitude_m=values["altitude_m"],
-            protection_degree="IP54",
-            tank_type="Corrugated",
-        ),
-        electrical=ElectricalInfo(
-            hv_voltage_V=values["hv_voltage_v"],
-            lv_voltage_V=values["lv_voltage_v"],
-            connection_group=values["connection_group"],
-            tap_changer_side="HV",
-            tap_changer_type="Off-Circuit",
-            rated_short_circuit_impedance_percent=values["uk_percent"],
-            impedance_reference_temperature_C=75.0,
-            no_load_loss_W=values["no_load_loss_w"],
-            load_loss_W=values["load_loss_w"],
-            load_loss_reference_temperature_C=75.0,
-            load_loss_definition="total",
-        ),
-        winding=WindingInfo(
-            hv_conductor_material=material_from_label(values["hv_material"]),
-            lv_conductor_material=material_from_label(values["lv_material"]),
-            hv_target_current_density_A_mm2=values["hv_j"],
-            lv_target_current_density_A_mm2=values["lv_j"],
-            hv_winding_height_mm=values["winding_height_mm"],
-            lv_winding_height_mm=values["winding_height_mm"],
         ),
         core=CoreInfo(
             core_topology=CoreTopology.THREE_LEG,
             number_of_legs=3,
             number_of_windows=2,
             target_max_flux_density_T=values["target_flux_t"],
-            stacking_factor=values["stacking_factor"],
+            core_steel_grade="M5",
+            stacking_factor=values.get("stacking_factor", 0.96),
+            additional_no_load_loss_factor=1.05
+        ),
+        electrical=ElectricalInfo(
+            hv_voltage_V=values["hv_voltage_v"],
+            lv_voltage_V=values["lv_voltage_v"],
+            connection_group=values["connection_group"],
+            tap_changer_side="HV",
+            tap_changer_type="Boşta",
+            rated_short_circuit_impedance_percent=values["uk_percent"],
+            impedance_reference_temperature_C=75,
+            no_load_loss_W=values["no_load_loss_w"],
+            load_loss_W=values["load_loss_w"],
+            load_loss_reference_temperature_C=75,
+            load_loss_definition="total",
+            loss_evaluation_mode=LossEvaluationMode.GUARANTEED,
+            tap_percentages=[-5.0, -2.5, 0.0, 2.5, 5.0]
+        ),
+        winding=WindingInfo(
+            hv_conductor_material=material_from_label(values["hv_material"]),
+            lv_conductor_material=material_from_label(values["lv_material"]),
+            hv_target_current_density_A_mm2=values["hv_j"],
+            lv_target_current_density_A_mm2=values["lv_j"],
+            hv_parallel_conductors=1,
+            lv_parallel_conductors=1,
+            hv_winding_height_mm=values["winding_height_mm"],
+            lv_winding_height_mm=values["winding_height_mm"],
+            additional_load_loss_factor=1.15
         ),
         insulation=InsulationThermalInfo(
+            oil_type=values["oil_type"],
             top_oil_temp_rise_limit_K=values["top_oil_rise_k"],
             allowed_hot_spot_temp_C=values["hot_spot_limit_c"],
-            oil_type=values["oil_type"],
         ),
     )
-
-
 def save_comparison(result: dict[str, object]) -> None:
     inputs = result["inputs"]
     row = {
@@ -296,7 +366,7 @@ if calculate_clicked or optimize_clicked:
                         heat_dissipation_w_m2k=heat_dissipation,
                     )
 
-                optimization = run_grid_search_optimizer(evaluate, objective="toc")
+                optimization = run_pareto_optimization(evaluate, objective="toc")
                 result = optimization["best_result"]
                 st.session_state["optimization_summary"] = optimization
         else:
@@ -520,7 +590,7 @@ with tabs[5]:
     )
     st.components.v1.html(transformer_svg, height=720)
     try:
-        pdf_bytes = generate_engineering_pdf_bytes(report_payload(result))
+        pdf_bytes = generate_engineering_pdf_bytes(result)
         st.download_button(
             "Mühendislik ön tasarım raporunu indir",
             data=pdf_bytes,
