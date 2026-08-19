@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 import yfinance as yf
-import json
-from datetime import datetime
 
 from copy import deepcopy
 
@@ -44,7 +42,7 @@ def get_market_prices():
         cu = yf.Ticker("HG=F").history(period="1d")["Close"].iloc[-1] * 2204.62
         al = yf.Ticker("ALI=F").history(period="1d")["Close"].iloc[-1]
         return {"copper": cu, "aluminum": al}
-    except:
+    except Exception:
         return {"copper": 9800.0, "aluminum": 2400.0}
 
 st.set_page_config(
