@@ -321,8 +321,13 @@ def synthesize_transformer(
         inputs.electrical.hv_voltage_V,
         impedance_pu,
         hv_turns["n_selected"],
+        lv_turns["n_selected"],
+        hv_conductor["a_selected_total"].to("mm**2").magnitude,
+        lv_conductor["a_selected_total"].to("mm**2").magnitude,
         winding_height_mm,
         mean_gap_diameter_mm,
+        inputs.winding.hv_conductor_material.name,
+        inputs.winding.lv_conductor_material.name,
     )
     dielectric = calculate_clearances(
         inputs.electrical.hv_voltage_V, inputs.electrical.lv_voltage_V
